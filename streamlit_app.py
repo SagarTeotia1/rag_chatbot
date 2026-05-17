@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 from pathlib import Path
 
 os.environ.setdefault("USE_TF", "0")
@@ -13,9 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.chat.chatbot import ask, _is_greeting
-
-# ── Page config ──────────────────────────────────────────────────────────────
+# ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="DoshMukti AI",
     page_icon="🕉️",
@@ -23,89 +20,53 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
+# ── Load secrets into env ─────────────────────────────────────────────────────
+for key in ["GROQ_API_KEY", "CHROMA_API_KEY", "CHROMA_TENANT", "CHROMA_DATABASE", "USE_TF", "TF_ENABLE_ONEDNN_OPTS"]:
+    try:
+        if key in st.secrets and not os.getenv(key):
+            os.environ[key] = str(st.secrets[key])
+    except Exception:
+        pass
+
+# ── Validate keys before importing heavy modules ──────────────────────────────
+if not os.getenv("GROQ_API_KEY"):
+    st.error("⚠️ GROQ_API_KEY not set. Go to Manage App → Secrets and add your keys.")
+    st.stop()
+
+from src.chat.chatbot import ask, _is_greeting
+
+# ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+#MainMenu, footer, header, [data-testid="stToolbar"], .stDeployButton { display: none !important; }
 
-/* Hide Streamlit chrome */
-#MainMenu, footer, header { visibility: hidden; }
-.stDeployButton { display: none; }
-[data-testid="stToolbar"] { display: none; }
-.stApp > header { display: none; }
-
-/* Body */
 .stApp {
-  background: radial-gradient(ellipse at 20% 20%, #1a0040 0%, #07001a 40%, #0d0025 100%);
-  font-family: 'Inter', sans-serif;
+  background: radial-gradient(ellipse at 20% 20%, #1a0040 0%, #07001a 40%, #0d0025 100%) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-/* Stars canvas */
-#stars-bg {
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(1px 1px at 25% 40%, rgba(255,255,255,0.4) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 40% 8%, rgba(255,255,255,0.7) 0%, transparent 100%),
-    radial-gradient(1px 1px at 55% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
-    radial-gradient(2px 2px at 70% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
-    radial-gradient(1px 1px at 80% 75%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 90% 35%, rgba(255,255,255,0.4) 0%, transparent 100%),
-    radial-gradient(1px 1px at 15% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
-    radial-gradient(1px 1px at 35% 55%, rgba(255,255,255,0.3) 0%, transparent 100%),
-    radial-gradient(2px 2px at 60% 90%, rgba(255,255,255,0.4) 0%, transparent 100%),
-    radial-gradient(1px 1px at 5% 50%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 48% 30%, rgba(255,255,255,0.5) 0%, transparent 100%),
-    radial-gradient(1px 1px at 75% 50%, rgba(255,255,255,0.3) 0%, transparent 100%),
-    radial-gradient(2px 2px at 88% 10%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(1px 1px at 20% 95%, rgba(255,255,255,0.4) 0%, transparent 100%),
-    radial-gradient(ellipse at 10% 10%, rgba(124,58,237,0.25) 0%, transparent 50%),
-    radial-gradient(ellipse at 90% 80%, rgba(168,85,247,0.2) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(109,40,217,0.1) 0%, transparent 70%);
-}
-
-/* Main container */
 .main .block-container {
-  max-width: 720px;
-  padding: 0 16px 20px;
-  position: relative; z-index: 1;
+  max-width: 700px;
+  padding: 0 16px 0;
 }
 
-/* Header */
-.dm-header {
-  text-align: center;
-  padding: 24px 0 12px;
-}
-.dm-logo {
-  width: 48px; height: 48px;
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  box-shadow: 0 0 28px rgba(147,51,234,0.7), 0 0 56px rgba(147,51,234,0.2);
-  margin: 0 auto 8px;
-}
+/* Shimmer title */
 .dm-title {
-  font-size: 26px; font-weight: 700; letter-spacing: 1px;
   background: linear-gradient(90deg, #c084fc, #f0abfc, #c084fc, #a855f7);
   background-size: 200% auto;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: shimmer 3s linear infinite;
-}
-.dm-sub {
-  font-size: 11px; color: rgba(255,255,255,0.35);
-  letter-spacing: 3px; text-transform: uppercase; margin-top: 4px;
-}
-.dm-divider {
-  height: 1px; margin: 10px 0;
-  background: linear-gradient(90deg, transparent, rgba(147,51,234,0.5), transparent);
+  font-size: 24px; font-weight: 700; letter-spacing: 1px;
 }
 @keyframes shimmer { to { background-position: 200% center; } }
 
-/* Chat messages */
+.dm-sub { font-size: 10px; color: rgba(255,255,255,0.35); letter-spacing: 3px; text-transform: uppercase; }
+.dm-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(147,51,234,0.5), transparent); margin: 8px 0 12px; }
+
+/* Messages */
 .msg-user {
-  display: flex; justify-content: flex-end; margin: 8px 0;
+  display: flex; justify-content: flex-end; margin: 6px 0;
 }
 .msg-user-bubble {
   max-width: 75%;
@@ -113,92 +74,74 @@ st.markdown("""
   padding: 10px 14px; border-radius: 16px 16px 4px 16px;
   font-size: 14px; line-height: 1.6; color: white;
   box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+  word-wrap: break-word;
 }
-.msg-ai {
-  display: flex; gap: 10px; align-items: flex-start; margin: 8px 0;
-}
+.msg-ai { display: flex; gap: 10px; align-items: flex-start; margin: 6px 0; }
 .msg-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
   background: linear-gradient(135deg, rgba(147,51,234,0.4), rgba(109,40,217,0.2));
   border: 1px solid rgba(147,51,234,0.5);
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; flex-shrink: 0;
-  box-shadow: 0 0 12px rgba(147,51,234,0.3);
+  font-size: 12px; box-shadow: 0 0 10px rgba(147,51,234,0.3);
 }
 .msg-ai-bubble {
   max-width: 82%;
   background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255,255,255,0.1);
-  padding: 12px 16px; border-radius: 0 16px 16px 16px;
+  padding: 10px 14px; border-radius: 0 16px 16px 16px;
   font-size: 14px; line-height: 1.7; color: rgba(255,255,255,0.88);
+  word-wrap: break-word;
 }
 
 /* Typing dots */
-.typing-dots { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
-.dot {
-  width: 8px; height: 8px; border-radius: 50%; background: #a855f7;
-  animation: dotPulse 1.4s ease-in-out infinite;
-}
+.typing-dots { display: flex; gap: 5px; align-items: center; padding: 2px 0; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: #a855f7; animation: dotPulse 1.4s ease-in-out infinite; }
 .dot:nth-child(2) { animation-delay: 0.2s; }
 .dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes dotPulse {
-  0%, 60%, 100% { opacity: 0.2; transform: scale(0.8); }
-  30% { opacity: 1; transform: scale(1.2); }
-}
+@keyframes dotPulse { 0%,60%,100% { opacity:0.2; transform:scale(0.8); } 30% { opacity:1; transform:scale(1.2); } }
 
-/* Input area */
-[data-testid="stTextInput"] input,
-.stTextInput input {
+/* Input */
+[data-testid="stTextInput"] input {
   background: rgba(255,255,255,0.04) !important;
-  border: 1px solid rgba(147,51,234,0.3) !important;
+  border: 1px solid rgba(147,51,234,0.35) !important;
   border-radius: 14px !important;
   color: white !important;
   font-size: 14px !important;
-  padding: 12px 16px !important;
 }
 [data-testid="stTextInput"] input:focus {
-  border-color: rgba(147,51,234,0.6) !important;
-  box-shadow: 0 0 20px rgba(147,51,234,0.15) !important;
+  border-color: rgba(147,51,234,0.7) !important;
+  box-shadow: 0 0 16px rgba(147,51,234,0.2) !important;
 }
 [data-testid="stTextInput"] input::placeholder { color: rgba(255,255,255,0.3) !important; }
 
-/* Send button */
+/* Button */
 .stButton > button {
   background: linear-gradient(135deg, #7c3aed, #a855f7) !important;
-  border: none !important;
-  border-radius: 14px !important;
-  color: white !important;
-  font-weight: 600 !important;
-  padding: 12px 24px !important;
-  box-shadow: 0 0 20px rgba(147,51,234,0.4) !important;
-  transition: all 0.2s !important;
+  border: none !important; border-radius: 14px !important;
+  color: white !important; font-weight: 600 !important;
+  box-shadow: 0 0 16px rgba(147,51,234,0.4) !important;
   width: 100% !important;
 }
-.stButton > button:hover {
-  box-shadow: 0 0 30px rgba(147,51,234,0.6) !important;
-  transform: translateY(-1px) !important;
-}
+.stButton > button:hover { box-shadow: 0 0 28px rgba(147,51,234,0.6) !important; }
 
 /* Suggestion chips */
-.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px 42px; }
-.chip {
-  font-size: 11px; padding: 5px 12px; border-radius: 20px;
-  border: 1px solid rgba(147,51,234,0.25);
-  background: linear-gradient(135deg, rgba(147,51,234,0.1), rgba(109,40,217,0.05));
-  color: rgba(255,255,255,0.65); cursor: pointer;
-  display: inline-block;
+[data-testid="column"] .stButton > button {
+  font-size: 11px !important; padding: 6px 8px !important;
+  background: linear-gradient(135deg, rgba(147,51,234,0.15), rgba(109,40,217,0.05)) !important;
+  border: 1px solid rgba(147,51,234,0.25) !important;
+  box-shadow: none !important; color: rgba(255,255,255,0.7) !important;
+  border-radius: 20px !important;
+}
+[data-testid="column"] .stButton > button:hover {
+  border-color: rgba(147,51,234,0.5) !important;
+  color: white !important;
 }
 
-/* Scrollable chat area */
-.chat-area { max-height: 60vh; overflow-y: auto; padding-right: 4px; }
-.chat-area::-webkit-scrollbar { width: 3px; }
-.chat-area::-webkit-scrollbar-thumb { background: rgba(147,51,234,0.4); border-radius: 2px; }
+/* Form submit row */
+[data-testid="stForm"] { background: transparent !important; border: none !important; }
 </style>
-
-<div id="stars-bg"></div>
 """, unsafe_allow_html=True)
-
 
 # ── Session state ─────────────────────────────────────────────────────────────
 if "messages" not in st.session_state:
@@ -206,110 +149,91 @@ if "messages" not in st.session_state:
 if "pending" not in st.session_state:
     st.session_state.pending = None
 
-
-# ── Header ────────────────────────────────────────────────────────────────────
+# ── Header ─────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="dm-header">
-  <div class="dm-logo">ॐ</div>
+<div style="text-align:center;padding:20px 0 8px;">
+  <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);
+    display:flex;align-items:center;justify-content:center;font-size:19px;margin:0 auto 6px;
+    box-shadow:0 0 28px rgba(147,51,234,0.7);">ॐ</div>
   <div class="dm-title">DoshMukti AI</div>
   <div class="dm-sub">Vedic Wisdom · ज्योतिष सहायक</div>
   <div class="dm-divider"></div>
 </div>
 """, unsafe_allow_html=True)
 
-
-# ── Render chat history ───────────────────────────────────────────────────────
-def render_message(role: str, content: str):
+# ── Message renderer ──────────────────────────────────────────────────────────
+def render_msg(role: str, content: str):
     if role == "user":
-        st.markdown(f"""
-        <div class="msg-user">
-          <div class="msg-user-bubble">{content}</div>
-        </div>""", unsafe_allow_html=True)
+        st.markdown(f'<div class="msg-user"><div class="msg-user-bubble">{content}</div></div>', unsafe_allow_html=True)
     else:
-        st.markdown(f"""
-        <div class="msg-ai">
-          <div class="msg-avatar">ॐ</div>
-          <div class="msg-ai-bubble">{content}</div>
-        </div>""", unsafe_allow_html=True)
+        st.markdown(f'<div class="msg-ai"><div class="msg-avatar">ॐ</div><div class="msg-ai-bubble">{content}</div></div>', unsafe_allow_html=True)
 
-
+# ── Chat history ──────────────────────────────────────────────────────────────
 for msg in st.session_state.messages:
-    render_message(msg["role"], msg["content"])
+    render_msg(msg["role"], msg["content"])
 
-
-# ── Welcome + suggestions (first load) ───────────────────────────────────────
+# ── Welcome (empty state) ──────────────────────────────────────────────────────
 if not st.session_state.messages:
     st.markdown("""
     <div class="msg-ai">
       <div class="msg-avatar">ॐ</div>
       <div class="msg-ai-bubble">
-        नमस्ते 🙏 मैं <strong style="color:#c084fc;">Pandit Rameshwar Das Ji</strong> हूँ — आपका Vedic ज्योतिष सहायक।<br>
-        दोष, उपाय, ग्रह दशा, आर्थिक या रिश्तों की समस्या — कुछ भी पूछें।<br>
-        <span style="color:rgba(255,255,255,0.4);font-size:12px;">Hindi या English — दोनों में।</span>
+        नमस्ते 🙏 मैं <strong style="color:#c084fc;">Pandit Rameshwar Das Ji</strong> हूँ।<br>
+        दोष, उपाय, ग्रह दशा, आर्थिक या रिश्तों की समस्या — कुछ भी पूछें।
       </div>
     </div>
-    <div class="chip-row">
-      <span class="chip">मंगल दोष उपाय</span>
-      <span class="chip">काल सर्प दोष</span>
-      <span class="chip">आर्थिक समस्या</span>
-      <span class="chip">शनि साढ़ेसाती</span>
-    </div>
+    <div style="height:8px;"></div>
     """, unsafe_allow_html=True)
 
+    SUGGESTIONS = [
+        ("मंगल दोष उपाय", "मंगल दोष के उपाय क्या हैं?"),
+        ("काल सर्प दोष", "काल सर्प दोष से मुक्ति कैसे पाएं?"),
+        ("आर्थिक समस्या", "पैसे की समस्या का ज्योतिष उपाय बताएं"),
+        ("शनि साढ़ेसाती", "शनि की साढ़ेसाती में क्या करें?"),
+    ]
     cols = st.columns(4)
-    suggestions = ["मंगल दोष के उपाय क्या हैं?", "काल सर्प दोष से मुक्ति?", "पैसे की समस्या का उपाय", "शनि साढ़ेसाती में क्या करें?"]
-    for i, col in enumerate(cols):
-        with col:
-            if st.button(suggestions[i].split("?")[0][:18] + "?", key=f"sug_{i}"):
-                st.session_state.pending = suggestions[i]
+    for i, (label, question) in enumerate(SUGGESTIONS):
+        with cols[i]:
+            if st.button(label, key=f"sug_{i}"):
+                st.session_state.pending = question
                 st.rerun()
 
-
-# ── Process pending (from suggestion click) ───────────────────────────────────
+# ── Process pending question (suggestion click) ───────────────────────────────
 if st.session_state.pending:
-    question = st.session_state.pending
+    q = st.session_state.pending
     st.session_state.pending = None
-    st.session_state.messages.append({"role": "user", "content": question})
-    render_message("user", question)
+    st.session_state.messages.append({"role": "user", "content": q})
+    history = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages[:-1]]
+    render_msg("user", q)
 
-    with st.spinner(""):
-        st.markdown("""<div class="msg-ai"><div class="msg-avatar">ॐ</div>
-        <div class="msg-ai-bubble"><div class="typing-dots">
-          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-        </div></div></div>""", unsafe_allow_html=True)
-        history = st.session_state.messages[:-1]
-        response = ask(question, chat_history=history, stream=False)
+    with st.spinner("Pandit Ji सोच रहे हैं..."):
+        response = ask(q, chat_history=history, stream=False)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
-    st.rerun()
+    render_msg("assistant", response)
 
-
-# ── Input bar ─────────────────────────────────────────────────────────────────
-st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+# ── Input form ────────────────────────────────────────────────────────────────
+st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
 with st.form("chat_form", clear_on_submit=True):
     col1, col2 = st.columns([5, 1])
     with col1:
         user_input = st.text_input(
-            label="",
+            label="input",
             placeholder="अपना प्रश्न पूछें... (Hindi / English)",
             label_visibility="collapsed",
         )
     with col2:
-        submitted = st.form_submit_button("भेजें →")
+        submitted = st.form_submit_button("भेजें")
 
 if submitted and user_input.strip():
-    question = user_input.strip()
-    st.session_state.messages.append({"role": "user", "content": question})
-    render_message("user", question)
-
-    st.markdown("""<div class="msg-ai"><div class="msg-avatar">ॐ</div>
-    <div class="msg-ai-bubble"><div class="typing-dots">
-      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-    </div></div></div>""", unsafe_allow_html=True)
-
+    q = user_input.strip()
+    st.session_state.messages.append({"role": "user", "content": q})
     history = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages[:-1]]
-    response = ask(question, chat_history=history, stream=False)
+    render_msg("user", q)
+
+    with st.spinner("Pandit Ji सोच रहे हैं..."):
+        response = ask(q, chat_history=history, stream=False)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
-    st.rerun()
+    render_msg("assistant", response)
