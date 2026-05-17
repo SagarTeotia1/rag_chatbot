@@ -1,0 +1,9 @@
+data/chroma_db/
+data/raw/
+__pycache__/
+*.pyc
+.env
+last_response.txt
+test_out.txt
+test_response.txt
+.streamlit/secrets.toml

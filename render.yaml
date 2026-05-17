@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: doshmukti-api
+    runtime: python
+    buildCommand: pip install -r requirements_api.txt
+    startCommand: python api.py
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CHROMA_API_KEY
+        sync: false
+      - key: CHROMA_TENANT
+        sync: false
+      - key: CHROMA_DATABASE
+        sync: false
+      - key: USE_TF
+        value: "0"
+      - key: TF_ENABLE_ONEDNN_OPTS
+        value: "0"
